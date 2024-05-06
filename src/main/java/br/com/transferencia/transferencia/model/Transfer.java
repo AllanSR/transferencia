@@ -33,5 +33,4 @@ public class Transfer {
 	private BigDecimal transferTaxValue;
 	
 	private double transferTax;
-
 }

@@ -3,11 +3,14 @@ package br.com.transferencia.transferencia.service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import br.com.transferencia.transferencia.model.Transfer;
 import br.com.transferencia.transferencia.model.request.TransferRequest;
+import br.com.transferencia.transferencia.repository.TransferRepository;
 
 @Service
 public class TransferService {
@@ -15,29 +18,36 @@ public class TransferService {
 	private static final BigDecimal NO_TAXES_FEE = BigDecimal.valueOf(0);
 	
 	
+	@Autowired
+	private TransferRepository transferRepository;
+	
 	public Transfer scheduleTransfer(TransferRequest request) {
-		
+
 		validadeRequest(request);
-		
+
 		Transfer transfer = new Transfer();
 		transfer.setAccountOrigin(request.getAccountOrigin());
 		transfer.setAccountTarget(request.getAccountTarget());
 		transfer.setSchedulingDate(request.getSchedulingDate());
 		transfer.setTransactionDate(LocalDate.now());
+		transfer.setTransferValue(request.getTransferValue());
 		calculateTaxes(request, transfer);
-		
-		return transfer;
+
+		return transferRepository.save(transfer);
+	}
+	
+	public List<Transfer> getAllTransfers(){
+		return transferRepository.findAll();
 	}
 
-	
 	private void calculateTaxes(TransferRequest request, Transfer transfer){
-		
-		long diff = ChronoUnit.DAYS.between(request.getSchedulingDate(), LocalDate.now());
+
+		long diff = ChronoUnit.DAYS.between(LocalDate.now(), request.getSchedulingDate());
 
 		if(diff == 0) {
 			transfer.setTransferTax(Double.valueOf(2.5));
 			transfer.setTransferTaxValue(new BigDecimal(3.00));
-		} else if(diff > 1 && diff <= 10) {
+		} else if(diff >= 1 && diff <= 10) {
 			transfer.setTransferTax(Double.valueOf(0.0));
 			transfer.setTransferTaxValue(new BigDecimal(12.00));
 		} else if(diff >= 11 && diff <= 20 ) {
@@ -58,7 +68,7 @@ public class TransferService {
 	}
 	
 	private void validadeRequest(TransferRequest request) {
-		
+
 		if(null == request)
 			throw new RuntimeException("Request nulo!");
 		
@@ -68,7 +78,7 @@ public class TransferService {
 		if (null == request.getAccountTarget() || request.getAccountTarget().length() != 10)
 			throw new RuntimeException("Valor invalido da conta origem!");
 		
-		if (null == request.getSchedulingDate() || ChronoUnit.DAYS.between(request.getSchedulingDate(), LocalDate.now()) < 0 )
+		if (null == request.getSchedulingDate() || ChronoUnit.DAYS.between(LocalDate.now(), request.getSchedulingDate()) < 0 )
 			throw new RuntimeException("Valor invalido da data programada de transferencia!");
 		
 		if (null == request.getTransferValue() || request.getTransferValue().compareTo(BigDecimal.ZERO) < 0)
